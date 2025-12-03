@@ -1,6 +1,6 @@
 from typing import List
 from sentence_transformers import CrossEncoder
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 
 class Reranker:

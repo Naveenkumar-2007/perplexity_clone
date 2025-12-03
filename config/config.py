@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -8,7 +8,7 @@ class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-    LLM_MODEL = "groq:openai/gpt-oss-120b"
+    LLM_MODEL = "llama-3.1-70b-versatile"
 
     CHUNK_SIZE = 400
     CHUNK_OVERLAP = 80
@@ -18,8 +18,11 @@ class Config:
         """Return chat LLM instance with tool calling disabled."""
         if not cls.GROQ_API_KEY:
             raise RuntimeError("GROQ_API_KEY missing in .env")
-        os.environ["GROQ_API_KEY"] = cls.GROQ_API_KEY
-        llm = init_chat_model(cls.LLM_MODEL)
+        llm = ChatGroq(
+            groq_api_key=cls.GROQ_API_KEY,
+            model_name=cls.LLM_MODEL,
+            temperature=0.7
+        )
         # Disable tool calling by binding empty tools list
         try:
             return llm.bind(tools=[])

@@ -6,7 +6,7 @@ import shutil
 
 from document_processing.processor import DocumentProcessor
 from vectorstore.store import VectorStore
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 
 class FileWorkspace:
