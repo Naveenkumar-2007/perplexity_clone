@@ -12,13 +12,21 @@ fastapi
 uvicorn[standard]
 pydantic
 python-dotenv
+python-multipart
+aiofiles
+
+# Streamlit Frontend
+streamlit
+
+# HTTP & Networking
+requests
+httpx
 
 # Embeddings + vector search
 sentence-transformers
 faiss-cpu
 
 # Web search + HTTP
-requests
 tavily-python
 
 # Scraping
@@ -30,3 +38,4 @@ wikipedia
 
 # PDF/text load support
 pypdf
+python-pptx

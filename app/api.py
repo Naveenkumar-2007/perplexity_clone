@@ -52,6 +52,16 @@ app.add_middleware(
     allow_credentials=True,
 )
 
+
+# =======================================================
+# Health Check Endpoint (for Azure Container Apps)
+# =======================================================
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for container orchestration"""
+    return {"status": "healthy", "service": "perplexity-clone-api"}
+
+
 # =======================================================
 # Global Components
 # =======================================================

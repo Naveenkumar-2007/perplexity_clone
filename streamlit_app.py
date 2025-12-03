@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import os
 from urllib.parse import urlparse
 
 # =====================================
@@ -31,7 +32,8 @@ if "show_upload" not in st.session_state:
 # =====================================
 # CONFIGURATION
 # =====================================
-API_URL = "http://localhost:8000"
+# Use environment variable for Azure deployment, fallback to localhost for local dev
+API_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 WORKSPACE = "default"
 
 # MODE MAPPING - All 8 modes with correct backend endpoints
