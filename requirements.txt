@@ -1,0 +1,32 @@
+# Core LLM + tools
+langchain
+langchain-core
+langchain-community
+langgraph
+
+# LLM providers (Groq via LangChain)
+langchain-groq
+
+# Web API backend
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+
+# Embeddings + vector search
+sentence-transformers
+faiss-cpu
+
+# Web search + HTTP
+requests
+tavily-python
+
+# Scraping
+trafilatura
+beautifulsoup4
+
+# Wikipedia tool dependency
+wikipedia
+
+# PDF/text load support
+pypdf
