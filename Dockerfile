@@ -25,12 +25,9 @@ RUN mkdir -p /app/workspace_data /app/chroma_db
 # Expose ports
 EXPOSE 8000 8501
 
-# Create startup script to run both services
-RUN echo '#!/bin/bash\n\
-uvicorn app.api:app --host 0.0.0.0 --port 8000 &\n\
-sleep 5\n\
-streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true\n\
-' > /app/start.sh && chmod +x /app/start.sh
+# Copy startup script
+COPY startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
 
 # Run both services
-CMD ["/bin/bash", "/app/start.sh"]
+CMD ["/bin/bash", "/app/startup.sh"]
