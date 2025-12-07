@@ -803,7 +803,7 @@ if st.session_state.current_result:
                 url = img.get("url") or img.get("thumbnail_url")
                 if url:
                     with cols[i % 3]:
-                        st.image(url, use_container_width=True)
+                        st.image(url, use_column_width=True)
         else:
             st.info("No images")
 

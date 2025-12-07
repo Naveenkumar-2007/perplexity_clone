@@ -14,10 +14,15 @@ class SearchTool:
 
     def search(self, query: str, num_results: int = 5) -> List[Dict]:
         url = "https://api.tavily.com/search"
-        payload = {"query": query, "num_results": num_results}
-        headers = {"Authorization": self.api_key}
+        payload = {
+            "api_key": self.api_key,
+            "query": query,
+            "max_results": num_results,
+            "include_answer": False,
+            "include_raw_content": False
+        }
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=20)
+            resp = requests.post(url, json=payload, timeout=20)
             resp.raise_for_status()
             data = resp.json()
             return data.get("results", [])
