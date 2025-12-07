@@ -8,8 +8,8 @@ class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
     
-    # Use valid Groq model - llama3-8b-8192 is fast and free
-    LLM_MODEL = os.getenv("LLM_MODEL", "llama3-8b-8192")
+    # Groq model
+    LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
 
     CHUNK_SIZE = 400
     CHUNK_OVERLAP = 80
