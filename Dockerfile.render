@@ -23,8 +23,9 @@ RUN mkdir -p /etc/supervisor/conf.d
 # Create workspace directories
 RUN mkdir -p /app/workspace_data /app/chroma_db
 
-# Expose both ports
-EXPOSE 8000 8501
+# Render uses PORT env variable - expose it
+ENV PORT=10000
+EXPOSE 10000
 
 # Copy supervisor config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
