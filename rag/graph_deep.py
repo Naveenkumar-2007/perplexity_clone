@@ -108,16 +108,16 @@ class WebSearchGraph:
     def build(self):
         g = StateGraph(WebSearchState)
         
-        g.add_node("search", self.search_node.search)
-        g.add_node("fetch", self.fetch_node.fetch)
+        g.add_node("do_search", self.search_node.search)
+        g.add_node("do_fetch", self.fetch_node.fetch)
         g.add_node("build_context", self.context_node.build_context)
-        g.add_node("answer", self.answer_node.answer)
+        g.add_node("generate_answer", self.answer_node.answer)
         
-        g.set_entry_point("search")
-        g.add_edge("search", "fetch")
-        g.add_edge("fetch", "build_context")
-        g.add_edge("build_context", "answer")
-        g.add_edge("answer", END)
+        g.set_entry_point("do_search")
+        g.add_edge("do_search", "do_fetch")
+        g.add_edge("do_fetch", "build_context")
+        g.add_edge("build_context", "generate_answer")
+        g.add_edge("generate_answer", END)
         
         self.graph = g.compile()
         return self.graph
@@ -147,14 +147,14 @@ class RAGOnlyGraph:
     def build(self):
         g = StateGraph(RAGOnlyState)
         
-        g.add_node("retrieve", self.retrieve_node.retrieve)
+        g.add_node("do_retrieve", self.retrieve_node.retrieve)
         g.add_node("build_context", self.context_node.build_context)
-        g.add_node("answer", self.answer_node.answer)
+        g.add_node("generate_answer", self.answer_node.answer)
         
-        g.set_entry_point("retrieve")
-        g.add_edge("retrieve", "build_context")
-        g.add_edge("build_context", "answer")
-        g.add_edge("answer", END)
+        g.set_entry_point("do_retrieve")
+        g.add_edge("do_retrieve", "build_context")
+        g.add_edge("build_context", "generate_answer")
+        g.add_edge("generate_answer", END)
         
         self.graph = g.compile()
         return self.graph
@@ -234,12 +234,12 @@ class AnalysisGraph:
     def build(self):
         g = StateGraph(AnalysisState)
         
-        g.add_node("search", self.search_node.search)
-        g.add_node("analyze", self.process_node.analyze)
+        g.add_node("do_search", self.search_node.search)
+        g.add_node("do_analyze", self.process_node.analyze)
         
-        g.set_entry_point("search")
-        g.add_edge("search", "analyze")
-        g.add_edge("analyze", END)
+        g.set_entry_point("do_search")
+        g.add_edge("do_search", "do_analyze")
+        g.add_edge("do_analyze", END)
         
         self.graph = g.compile()
         return self.graph
@@ -268,12 +268,12 @@ class SummarizeGraph:
     def build(self):
         g = StateGraph(SummarizeState)
         
-        g.add_node("input", self.input_node.process_input)
-        g.add_node("summarize", self.process_node.summarize)
+        g.add_node("process_input", self.input_node.process_input)
+        g.add_node("do_summarize", self.process_node.summarize)
         
-        g.set_entry_point("input")
-        g.add_edge("input", "summarize")
-        g.add_edge("summarize", END)
+        g.set_entry_point("process_input")
+        g.add_edge("process_input", "do_summarize")
+        g.add_edge("do_summarize", END)
         
         self.graph = g.compile()
         return self.graph
