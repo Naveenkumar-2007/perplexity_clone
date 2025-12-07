@@ -59,7 +59,7 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check endpoint for container orchestration"""
-    return {"status": "healthy", "service": "perplexity-clone-api"}
+    return {"status": "healthy", "service": "perplexity-clone-api", "lite_mode": Config.LITE_MODE}
 
 
 # =======================================================
@@ -73,36 +73,50 @@ name_tool = NameTool()
 followup = FollowUpGenerator()
 search_tool = SearchTool()
 browse_tool = BrowseTool()
-reranker = Reranker()
 image_search = TavilyImageSearch()
-knowledge_panel = KnowledgePanel()
 summarizer = SummarizerTool()
 
-# RAG demo vectorstore
-processor = DocumentProcessor(
-    chunk_size=Config.CHUNK_SIZE,
-    chunk_overlap=Config.CHUNK_OVERLAP,
-)
-demo_docs = processor.load_url("https://lilianweng.github.io/posts/2023-06-23-agent/")
-demo_splits = processor.split(demo_docs)
-
-vector = VectorStore()
-vector.create(demo_splits)
+# Only load heavy components if not in LITE_MODE
+if not Config.LITE_MODE:
+    reranker = Reranker()
+    knowledge_panel = KnowledgePanel()
+    
+    # RAG demo vectorstore
+    processor = DocumentProcessor(
+        chunk_size=Config.CHUNK_SIZE,
+        chunk_overlap=Config.CHUNK_OVERLAP,
+    )
+    demo_docs = processor.load_url("https://lilianweng.github.io/posts/2023-06-23-agent/")
+    demo_splits = processor.split(demo_docs)
+    
+    vector = VectorStore()
+    vector.create(demo_splits)
+else:
+    reranker = None
+    knowledge_panel = None
+    vector = None
+    print("⚡ LITE_MODE: Skipping heavy embeddings to save memory")
 
 # File manager for per-workspace document RAG
 file_manager = FileManager(base_dir="workspace_data")
 
 # =======================================================
-# Initialize All LangGraph Pipelines
+# Initialize All LangGraph Pipelines (only if not LITE_MODE)
 # =======================================================
-deep_graph = DeepResearchGraph(vector)
+if not Config.LITE_MODE:
+    deep_graph = DeepResearchGraph(vector)
+    rag_graph = RAGOnlyGraph(file_manager)
+    agentic_graph = AgenticRAGGraph(file_manager, vector, image_search)
+else:
+    deep_graph = None
+    rag_graph = None
+    agentic_graph = None
+
 web_graph = WebSearchGraph()
-rag_graph = RAGOnlyGraph(file_manager)
-agentic_graph = AgenticRAGGraph(file_manager, vector, image_search)
 analysis_graph = AnalysisGraph()
 summarize_graph = SummarizeGraph()
 
-print("✅ All LangGraph pipelines initialized!")
+print("✅ All LangGraph pipelines initialized!" if not Config.LITE_MODE else "✅ LITE MODE: Core pipelines initialized!")
 
 
 # =======================================================

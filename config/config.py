@@ -7,11 +7,15 @@ load_dotenv()
 class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
-    LLM_MODEL = "openai/gpt-oss-120b"
+    
+    # Use lighter model for free tier
+    LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 
     CHUNK_SIZE = 400
     CHUNK_OVERLAP = 80
+    
+    # Disable heavy features on free tier (512MB RAM limit)
+    LITE_MODE = os.getenv("LITE_MODE", "true").lower() == "true"
 
     @classmethod
     def get_llm(cls):
