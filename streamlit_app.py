@@ -562,42 +562,50 @@ else:
 # =====================================
 st.markdown('<div class="search-wrapper">', unsafe_allow_html=True)
 
-# Single row with everything inside
-col1, col2, col3, col4 = st.columns([2, 8, 1, 1])
+# Use a form so Enter key submits
+with st.form(key="search_form", clear_on_submit=False):
+    col1, col2, col3, col4 = st.columns([2, 8, 1, 1])
+    
+    with col1:
+        # Mode selector dropdown
+        mode_list = list(MODES.keys())
+        current_idx = mode_list.index(st.session_state.mode)
+        selected = st.selectbox(
+            "mode",
+            mode_list,
+            index=current_idx,
+            format_func=lambda x: f"{MODES[x]['icon']} {x}",
+            label_visibility="collapsed",
+            key="mode_select"
+        )
+    
+    with col2:
+        # Search input - Enter key will submit the form
+        query = st.text_input(
+            "search",
+            placeholder="Ask anything... (Press Enter to search)",
+            label_visibility="collapsed",
+            key="query_input"
+        )
+    
+    with col3:
+        # Placeholder for alignment
+        st.write("")
+    
+    with col4:
+        # Submit button
+        submit = st.form_submit_button("→", help="Search")
 
-with col1:
-    # Mode selector dropdown
-    mode_list = list(MODES.keys())
-    current_idx = mode_list.index(st.session_state.mode)
-    selected = st.selectbox(
-        "mode",
-        mode_list,
-        index=current_idx,
-        format_func=lambda x: f"{MODES[x]['icon']} {x}",
-        label_visibility="collapsed",
-        key="mode_select"
-    )
-    if selected != st.session_state.mode:
-        st.session_state.mode = selected
-        st.rerun()
+# Handle mode change outside form
+if selected != st.session_state.mode:
+    st.session_state.mode = selected
+    st.rerun()
 
-with col2:
-    # Search input
-    query = st.text_input(
-        "search",
-        placeholder="Ask anything...",
-        label_visibility="collapsed",
-        key="query_input"
-    )
-
-with col3:
-    # File upload icon button - toggles file picker
-    if st.button("📎", key="attach_btn", help="Upload files"):
+# File upload button (outside form)
+col_attach, col_spacer_attach = st.columns([1, 11])
+with col_attach:
+    if st.button("📎 Attach files", key="attach_btn"):
         st.session_state.show_upload = not st.session_state.show_upload
-
-with col4:
-    # Submit button
-    submit = st.button("→", key="submit_btn", help="Search")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -628,31 +636,29 @@ if st.session_state.mode == "Video Brain" and not st.session_state.current_resul
                 background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); 
                 border-radius: 16px; color: white;">
         <h3 style="margin: 0; font-size: 24px;">🎥 Video Brain – Understand Any YouTube Lecture</h3>
-        <p style="margin: 10px 0 0; opacity: 0.9;">🔵 Upload Video First</p>
+        <p style="margin: 10px 0 0; opacity: 0.9;">🔵 Paste YouTube URL below, then ask questions</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # YouTube URL input
-    col_yt1, col_yt2 = st.columns([5, 1])
-    with col_yt1:
-        youtube_url = st.text_input(
-            "youtube_url",
-            placeholder="Enter YouTube URL (e.g., https://youtube.com/watch?v=...)",
-            label_visibility="collapsed",
-            key="youtube_url_input"
-        )
-    with col_yt2:
-        if st.button("📺 Load", key="load_video_btn"):
-            if youtube_url and ("youtube.com" in youtube_url or "youtu.be" in youtube_url):
-                st.session_state.youtube_url = youtube_url
-                st.session_state.video_loaded = True
-                st.success("✅ Video loaded! Now ask questions about it.")
-            else:
-                st.error("Please enter a valid YouTube URL")
+    # YouTube URL input - auto-loads on change
+    youtube_url = st.text_input(
+        "YouTube URL",
+        value=st.session_state.youtube_url,
+        placeholder="Paste YouTube URL here (e.g., https://youtube.com/watch?v=...)",
+        key="youtube_url_input"
+    )
+    
+    # Auto-detect and save YouTube URL
+    if youtube_url and ("youtube.com" in youtube_url or "youtu.be" in youtube_url):
+        if youtube_url != st.session_state.youtube_url:
+            st.session_state.youtube_url = youtube_url
+            st.session_state.video_loaded = True
     
     if st.session_state.video_loaded and st.session_state.youtube_url:
-        st.success(f"📺 Video ready: {st.session_state.youtube_url[:50]}...")
+        st.success(f"✅ Video loaded! Now ask questions about it below.")
         st.markdown("<p style='text-align: center; color: #888; margin: 15px 0;'>Ask about the video:</p>", unsafe_allow_html=True)
+    else:
+        st.info("👆 Paste a YouTube URL above to get started")
 
 # Show file uploader when icon is clicked
 if st.session_state.show_upload:
