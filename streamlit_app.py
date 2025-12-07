@@ -28,6 +28,12 @@ if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 if "show_upload" not in st.session_state:
     st.session_state.show_upload = False
+if "youtube_url" not in st.session_state:
+    st.session_state.youtube_url = ""
+if "video_loaded" not in st.session_state:
+    st.session_state.video_loaded = False
+if "product_ideas" not in st.session_state:
+    st.session_state.product_ideas = []
 
 # =====================================
 # CONFIGURATION
@@ -77,6 +83,16 @@ MODES = {
         "icon": "💬",
         "desc": "Direct AI chat",
         "endpoint": "/api/focus"
+    },
+    "Product MVP": {
+        "icon": "🚀",
+        "desc": "Idea → MVP Blueprint",
+        "endpoint": "/api/product_mvp"
+    },
+    "Video Brain": {
+        "icon": "🎥",
+        "desc": "Understand YouTube lectures",
+        "endpoint": "/api/video_brain"
     },
 }
 
@@ -443,7 +459,7 @@ st.markdown(get_css(), unsafe_allow_html=True)
 # =====================================
 # HELPER FUNCTIONS
 # =====================================
-def call_api(query: str, mode: str):
+def call_api(query: str, mode: str, extra_data: dict = None):
     """Call backend API based on selected mode."""
     mode_config = MODES.get(mode, MODES["Automatic"])
     endpoint = mode_config["endpoint"]
@@ -454,9 +470,23 @@ def call_api(query: str, mode: str):
         "mode": mode.lower().replace(" ", "_")
     }
     
+    # Add extra data for special modes
+    if extra_data:
+        payload.update(extra_data)
+    
     try:
         response = requests.post(f"{API_URL}{endpoint}", json=payload, timeout=180)
-        return response.json()
+        response.raise_for_status()
+        try:
+            return response.json()
+        except ValueError:
+            return {
+                "answer": f"Error: Invalid JSON response from server",
+                "sources": [],
+                "links": [],
+                "images": [],
+                "followups": []
+            }
     except Exception as e:
         return {
             "answer": f"Error: {str(e)}",
@@ -574,6 +604,56 @@ st.markdown('</div>', unsafe_allow_html=True)
 # Mode description
 st.markdown(f'<div class="mode-desc">{MODES[st.session_state.mode]["icon"]} {st.session_state.mode}: {MODES[st.session_state.mode]["desc"]}</div>', unsafe_allow_html=True)
 
+# =====================================
+# SPECIAL UI FOR PRODUCT MVP MODE
+# =====================================
+if st.session_state.mode == "Product MVP" and not st.session_state.current_result:
+    st.markdown("""
+    <div style="text-align: center; padding: 20px; margin: 20px auto; max-width: 700px; 
+                background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); 
+                border-radius: 16px; color: white;">
+        <h3 style="margin: 0; font-size: 24px;">🚀 Product Builder – Idea → MVP Blueprint</h3>
+        <p style="margin: 10px 0 0; opacity: 0.9;">🟠 Product Builder Active</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<p style='text-align: center; color: #888; margin: 15px 0;'>Describe your product idea:</p>", unsafe_allow_html=True)
+
+# =====================================
+# SPECIAL UI FOR VIDEO BRAIN MODE
+# =====================================
+if st.session_state.mode == "Video Brain" and not st.session_state.current_result:
+    st.markdown("""
+    <div style="text-align: center; padding: 20px; margin: 20px auto; max-width: 700px; 
+                background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); 
+                border-radius: 16px; color: white;">
+        <h3 style="margin: 0; font-size: 24px;">🎥 Video Brain – Understand Any YouTube Lecture</h3>
+        <p style="margin: 10px 0 0; opacity: 0.9;">🔵 Upload Video First</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # YouTube URL input
+    col_yt1, col_yt2 = st.columns([5, 1])
+    with col_yt1:
+        youtube_url = st.text_input(
+            "youtube_url",
+            placeholder="Enter YouTube URL (e.g., https://youtube.com/watch?v=...)",
+            label_visibility="collapsed",
+            key="youtube_url_input"
+        )
+    with col_yt2:
+        if st.button("📺 Load", key="load_video_btn"):
+            if youtube_url and ("youtube.com" in youtube_url or "youtu.be" in youtube_url):
+                st.session_state.youtube_url = youtube_url
+                st.session_state.video_loaded = True
+                st.success("✅ Video loaded! Now ask questions about it.")
+            else:
+                st.error("Please enter a valid YouTube URL")
+    
+    if st.session_state.video_loaded and st.session_state.youtube_url:
+        st.success(f"📺 Video ready: {st.session_state.youtube_url[:50]}...")
+        st.markdown("<p style='text-align: center; color: #888; margin: 15px 0;'>Ask about the video:</p>", unsafe_allow_html=True)
+
 # Show file uploader when icon is clicked
 if st.session_state.show_upload:
     uploaded = st.file_uploader(
@@ -602,8 +682,25 @@ if st.session_state.uploaded_files:
 # HANDLE SEARCH
 # =====================================
 if submit and query.strip():
+    extra_data = None
+    
+    # For Video Brain mode, include the YouTube URL
+    if st.session_state.mode == "Video Brain":
+        if st.session_state.video_loaded and st.session_state.youtube_url:
+            extra_data = {"youtube_url": st.session_state.youtube_url}
+        else:
+            st.warning("⚠️ Please load a YouTube video first!")
+            st.stop()
+    
+    # For Product MVP mode, save to ideas history
+    if st.session_state.mode == "Product MVP":
+        st.session_state.product_ideas.append({
+            "idea": query.strip(),
+            "time": "just now"
+        })
+    
     with st.spinner(f"🔄 {st.session_state.mode}..."):
-        result = call_api(query.strip(), st.session_state.mode)
+        result = call_api(query.strip(), st.session_state.mode, extra_data)
         st.session_state.current_result = {
             "query": query.strip(),
             "mode": st.session_state.mode,
@@ -621,6 +718,26 @@ if st.session_state.current_result:
     
     st.divider()
     
+    # Special header for Product MVP mode
+    if result['mode'] == "Product MVP":
+        st.markdown("""
+        <div style="text-align: center; padding: 15px; margin: 10px auto; max-width: 700px; 
+                    background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); 
+                    border-radius: 12px; color: white;">
+            <h4 style="margin: 0;">📄 MVP Blueprint</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Special header for Video Brain mode
+    if result['mode'] == "Video Brain":
+        st.markdown("""
+        <div style="text-align: center; padding: 15px; margin: 10px auto; max-width: 700px; 
+                    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); 
+                    border-radius: 12px; color: white;">
+            <h4 style="margin: 0;">🎥 Video Analysis</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
     # Query box
     mode_info = MODES.get(result['mode'], MODES['Automatic'])
     st.markdown(f"""
@@ -634,6 +751,10 @@ if st.session_state.current_result:
     sources = data.get("sources", []) or data.get("links", [])
     if sources:
         st.success(f"✓ {len(sources)} sources")
+    
+    # Memory saved notification for Product MVP
+    if result['mode'] == "Product MVP":
+        st.info("📝 New Memory Saved")
     
     # Layout - Full width (removed duplicate sidebar sources)
     tabs = st.tabs(["✨ Answer", "🔗 Sources", "🖼️ Images"])
@@ -649,8 +770,11 @@ if st.session_state.current_result:
             st.markdown("**Related:**")
             for i, fu in enumerate(followups[:3]):
                 if st.button(f"→ {fu}", key=f"fu_{i}"):
+                    extra = None
+                    if st.session_state.mode == "Video Brain" and st.session_state.youtube_url:
+                        extra = {"youtube_url": st.session_state.youtube_url}
                     with st.spinner("..."):
-                        new_result = call_api(fu, st.session_state.mode)
+                        new_result = call_api(fu, st.session_state.mode, extra)
                         st.session_state.current_result = {
                             "query": fu,
                             "mode": st.session_state.mode,
@@ -700,6 +824,11 @@ with st.sidebar:
         st.session_state.uploaded_files = []
         st.info("Files cleared")
     
+    if st.button("🗑️ Clear Video", use_container_width=True):
+        st.session_state.youtube_url = ""
+        st.session_state.video_loaded = False
+        st.info("Video cleared")
+    
     st.divider()
     st.caption(f"Theme: {'🌙 Dark' if st.session_state.theme == 'dark' else '☀️ Light'}")
     st.caption(f"Mode: {st.session_state.mode}")
@@ -709,3 +838,16 @@ with st.sidebar:
         st.markdown("### 📁 Files")
         for f in st.session_state.uploaded_files:
             st.caption(f"📄 {f}")
+    
+    # Show video info for Video Brain mode
+    if st.session_state.video_loaded and st.session_state.youtube_url:
+        st.divider()
+        st.markdown("### 🎥 Loaded Video")
+        st.caption(f"📺 {st.session_state.youtube_url[:40]}...")
+    
+    # Show recent product ideas
+    if st.session_state.product_ideas:
+        st.divider()
+        st.markdown("### 🧾 Recent Ideas")
+        for idea in st.session_state.product_ideas[-3:]:
+            st.caption(f"💡 {idea['idea'][:30]}...")

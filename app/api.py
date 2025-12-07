@@ -992,3 +992,243 @@ def agentic_mode(req: ModeRequest):
     )
 
 
+# =======================================================
+# PRODUCT MVP ENDPOINT - Generates MVP Blueprints
+# =======================================================
+class ProductMVPRequest(BaseModel):
+    message: str
+    workspace_id: str = "default"
+    mode: str = "product_mvp"
+
+
+@app.post("/api/product_mvp", response_model=ChatResponse)
+def product_mvp_mode(req: ProductMVPRequest):
+    """
+    Product MVP Mode - Generates comprehensive MVP blueprints from product ideas.
+    Includes product name, pitch, target users, features, architecture, tech stack, and more.
+    """
+    q = req.message.strip()
+    ws = req.workspace_id
+    
+    memory.add(ws, "user", q)
+    print(f"\n🚀 PRODUCT MVP MODE: {q}")
+    
+    # Research similar products and market
+    market_research = ""
+    try:
+        results = search_tool.search(f"{q} startup MVP product", num_results=3)
+        if results:
+            for r in results:
+                url = r.get("url", "")
+                text = browse_tool.fetch_clean(url)
+                if text:
+                    market_research += text[:800] + "\n\n"
+    except Exception as e:
+        print(f"Market research error: {e}")
+    
+    prompt = f"""You are a PRODUCT BUILDER AI that creates comprehensive MVP blueprints.
+
+The user wants to build: {q}
+
+{f"MARKET RESEARCH (use for context):{chr(10)}{market_research}" if market_research else ""}
+
+Generate a COMPLETE MVP Blueprint with the following sections. Use markdown formatting with tables where appropriate:
+
+# 📄 MVP Blueprint – [Product Name]
+A one-line description of the product.
+
+## 1. Product Name
+Create a catchy, memorable product name.
+
+## 2. One‑Line Pitch
+A compelling pitch in quotes that explains the value proposition.
+
+## 3. Target Users
+Create a markdown table with columns: Persona | Age | Occupation | Goals | Pain Points | How [Product] Helps
+Include 4-5 different user personas.
+
+## 4. Problems to Solve
+List 5 key problems the product solves with bullet points.
+
+## 5. MVP Features
+Create a table with: Feature | Description | Priority (Must-have/Nice-to-have)
+Include 8-10 features.
+
+## 6. User Journey (Step‑by‑Step)
+Number each step of the user journey from landing to retention.
+
+## 7. System Architecture
+Create an ASCII diagram showing the system components and their connections.
+Include: Frontend, Backend, Database, APIs, Third-party services.
+
+## 8. Database Tables
+Create a table showing the main database tables with: Table | Columns | Notes
+
+## 9. API Endpoints (REST)
+Create a table with: Method | Endpoint | Description | Auth Required
+
+## 10. Tech Stack
+Create a table with: Layer | Technology | Reason
+Cover: Frontend, Backend, Auth, Database, Cache, Storage, Hosting, CI/CD, Monitoring
+
+## 11. Future Features (Post‑MVP)
+List 8 features for after MVP launch.
+
+## Next Steps
+List 5 actionable next steps to start building.
+
+End with: **Happy building! 🚀**
+
+Be detailed, practical, and use real-world best practices. Make it production-ready."""
+
+    msgs = build_context(ws, prompt)
+    answer = llm.invoke(msgs).content
+    
+    # Generate follow-up questions
+    follow = [
+        "Generate wireframes for core screens",
+        "Create a development timeline",
+        "Estimate the MVP budget",
+        "Design the database schema in detail",
+        "Write user stories for MVP features"
+    ]
+    
+    memory.add(ws, "assistant", answer)
+    print(f"  ✅ Product MVP: Blueprint generated")
+    
+    return ChatResponse(
+        answer=answer,
+        sources=[],
+        links=[],
+        images=[],
+        followups=follow,
+        default_tab="answer",
+        workspace_id=ws
+    )
+
+
+# =======================================================
+# VIDEO BRAIN ENDPOINT - YouTube Video Analysis
+# =======================================================
+class VideoBrainRequest(BaseModel):
+    message: str
+    workspace_id: str = "default"
+    mode: str = "video_brain"
+    youtube_url: str = ""
+
+
+@app.post("/api/video_brain", response_model=ChatResponse)
+def video_brain_mode(req: VideoBrainRequest):
+    """
+    Video Brain Mode - Analyzes YouTube videos and answers questions about them.
+    Extracts transcript/content and provides intelligent responses.
+    """
+    q = req.message.strip()
+    ws = req.workspace_id
+    youtube_url = req.youtube_url
+    
+    memory.add(ws, "user", q)
+    print(f"\n🎥 VIDEO BRAIN MODE: {q}")
+    print(f"  📺 YouTube URL: {youtube_url}")
+    
+    if not youtube_url:
+        return ChatResponse(
+            answer="⚠️ Please provide a YouTube URL first. Enter the URL in the Video Brain interface and click 'Load' before asking questions.",
+            sources=[],
+            links=[],
+            images=[],
+            followups=[],
+            default_tab="answer",
+            workspace_id=ws
+        )
+    
+    # Try to get video information
+    video_content = ""
+    video_title = ""
+    
+    try:
+        # Extract video ID
+        video_id = ""
+        if "v=" in youtube_url:
+            video_id = youtube_url.split("v=")[1].split("&")[0]
+        elif "youtu.be/" in youtube_url:
+            video_id = youtube_url.split("youtu.be/")[1].split("?")[0]
+        
+        print(f"  🔍 Video ID: {video_id}")
+        
+        # Search for video information and related content
+        if video_id:
+            # Search for the video title and description
+            topic_results = search_tool.search(f"youtube {video_id}", num_results=3)
+            if topic_results:
+                for r in topic_results:
+                    title = r.get("title", "")
+                    if title and not video_title:
+                        video_title = title
+                    snippet = r.get("content", "") or r.get("snippet", "")
+                    if snippet:
+                        video_content += snippet + "\n"
+        
+        # Search for transcript or summary
+        search_query = f"youtube video transcript summary {video_title or video_id}"
+        results = search_tool.search(search_query, num_results=3)
+        
+        for r in results[:2]:
+            url = r.get("url", "")
+            if url and "youtube.com" not in url:  # Skip YouTube pages, get transcripts
+                text = browse_tool.fetch_clean(url)
+                if text:
+                    video_content += text[:2000] + "\n\n"
+        
+        print(f"  📝 Content gathered: {len(video_content)} chars")
+        
+    except Exception as e:
+        print(f"  ❌ Video content fetch error: {e}")
+    
+    prompt = f"""You are VIDEO BRAIN AI - an expert at analyzing and explaining YouTube video content.
+
+VIDEO URL: {youtube_url}
+{f"VIDEO TITLE: {video_title}" if video_title else ""}
+
+{f"AVAILABLE VIDEO CONTEXT:{chr(10)}{video_content[:4000]}" if video_content else "Note: Could not fetch video transcript directly. I will provide helpful guidance based on the question and general knowledge."}
+
+USER QUESTION: {q}
+
+Instructions:
+1. If context is available, answer based on the video content
+2. If the question is about summarizing, provide key points and takeaways
+3. If asking about specific topics, explain them clearly
+4. Use timestamps if available (e.g., "At around 5:30...")
+5. If limited information is available, be honest but still provide helpful guidance
+6. Format your response with headers and bullet points for clarity
+7. Make the response educational and easy to understand
+
+Provide a comprehensive, helpful response:"""
+
+    msgs = build_context(ws, prompt)
+    answer = llm.invoke(msgs).content
+    
+    # Generate follow-up questions about the video
+    follow = [
+        "Summarize the main points of this video",
+        "What are the key takeaways?",
+        "Explain the most important concept covered",
+        "What questions should I ask about this topic?",
+        "Create study notes from this video"
+    ]
+    
+    sources = [{"title": f"🎥 {video_title or 'YouTube Video'}", "url": youtube_url}]
+    links = [{"title": video_title or "YouTube Video", "url": youtube_url, "snippet": "Source video"}]
+    
+    memory.add(ws, "assistant", answer)
+    print(f"  ✅ Video Brain: Response generated")
+    
+    return ChatResponse(
+        answer=answer,
+        sources=sources,
+        links=links,
+        images=[],
+        followups=follow,
+        default_tab="answer",
+        workspace_id=ws
+    )

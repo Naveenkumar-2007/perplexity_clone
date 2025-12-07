@@ -25,6 +25,7 @@ class KnowledgePanel:
         try:
             url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.replace(' ', '_')}"
             r = requests.get(url, timeout=10)
+            r.raise_for_status()
             data = r.json()
 
             return {
@@ -34,7 +35,8 @@ class KnowledgePanel:
                 "thumbnail": data.get("thumbnail", {}).get("source", ""),
                 "url": data.get("content_urls", {}).get("desktop", {}).get("page", "")
             }
-        except:
+        except (requests.exceptions.RequestException, ValueError) as e:
+            print(f"Wikipedia API error: {e}")
             return {}
 
     def get_fast_facts(self, query: str) -> List[str]:

@@ -110,13 +110,13 @@ class WebSearchGraph:
         
         g.add_node("search", self.search_node.search)
         g.add_node("fetch", self.fetch_node.fetch)
-        g.add_node("context", self.context_node.build_context)
+        g.add_node("build_context", self.context_node.build_context)
         g.add_node("answer", self.answer_node.answer)
         
         g.set_entry_point("search")
         g.add_edge("search", "fetch")
-        g.add_edge("fetch", "context")
-        g.add_edge("context", "answer")
+        g.add_edge("fetch", "build_context")
+        g.add_edge("build_context", "answer")
         g.add_edge("answer", END)
         
         self.graph = g.compile()
@@ -148,12 +148,12 @@ class RAGOnlyGraph:
         g = StateGraph(RAGOnlyState)
         
         g.add_node("retrieve", self.retrieve_node.retrieve)
-        g.add_node("context", self.context_node.build_context)
+        g.add_node("build_context", self.context_node.build_context)
         g.add_node("answer", self.answer_node.answer)
         
         g.set_entry_point("retrieve")
-        g.add_edge("retrieve", "context")
-        g.add_edge("context", "answer")
+        g.add_edge("retrieve", "build_context")
+        g.add_edge("build_context", "answer")
         g.add_edge("answer", END)
         
         self.graph = g.compile()

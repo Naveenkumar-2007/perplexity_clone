@@ -16,7 +16,11 @@ class SearchTool:
         url = "https://api.tavily.com/search"
         payload = {"query": query, "num_results": num_results}
         headers = {"Authorization": self.api_key}
-        resp = requests.post(url, json=payload, headers=headers, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", [])
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=20)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("results", [])
+        except (requests.exceptions.RequestException, ValueError) as e:
+            print(f"Search error: {e}")
+            return []
