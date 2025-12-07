@@ -487,13 +487,18 @@ def deep_research(req: ChatRequest):
     memory.add(ws, "user", q)
 
     try:
-        state = deep_graph.run(q)
-        # state is a dict (TypedDict), not an object
-        answer = state.get("final_answer", "No answer generated.")
-        sources = state.get("sources", [])
+        if deep_graph is None:
+            # LITE_MODE fallback - use web search instead
+            state = web_graph.run(q)
+            answer = state.get("answer", "No answer generated.")
+            sources = state.get("sources", [])
+        else:
+            state = deep_graph.run(q)
+            answer = state.get("final_answer", "No answer generated.")
+            sources = state.get("sources", [])
     except Exception as e:
-        print("Deep research error:", e)
-        answer = "Something went wrong in deep research mode."
+        print(f"Deep research error: {e}")
+        answer = f"Deep research encountered an error. Please try again."
         sources = []
 
     memory.add(ws, "assistant", answer)
@@ -752,13 +757,20 @@ def analyze_mode(req: ModeRequest):
     
     memory.add(ws, "user", q)
     
-    # Run the AnalysisGraph pipeline
-    state = analysis_graph.run(q)
-    
-    answer = state.get("answer", "No analysis generated.")
-    sources = state.get("sources", [])
-    links = state.get("links", [])
-    follow = state.get("followups", [])
+    try:
+        # Run the AnalysisGraph pipeline
+        state = analysis_graph.run(q)
+        
+        answer = state.get("answer", "No analysis generated.")
+        sources = state.get("sources", [])
+        links = state.get("links", [])
+        follow = state.get("followups", [])
+    except Exception as e:
+        print(f"Analysis error: {e}")
+        answer = f"Analysis encountered an error: {str(e)[:100]}"
+        sources = []
+        links = []
+        follow = []
     
     # Get related images
     images = tavily_images_safe(q)
@@ -916,13 +928,20 @@ def web_search_mode(req: ModeRequest):
     
     memory.add(ws, "user", q)
     
-    # Run the WebSearchGraph pipeline
-    state = web_graph.run(q)
-    
-    answer = state.get("answer", "No answer generated.")
-    sources = state.get("sources", [])
-    links = state.get("links", [])
-    follow = state.get("followups", [])
+    try:
+        # Run the WebSearchGraph pipeline
+        state = web_graph.run(q)
+        
+        answer = state.get("answer", "No answer generated.")
+        sources = state.get("sources", [])
+        links = state.get("links", [])
+        follow = state.get("followups", [])
+    except Exception as e:
+        print(f"Web search error: {e}")
+        answer = f"Web search encountered an error: {str(e)[:100]}"
+        sources = []
+        links = []
+        follow = []
     
     # Get images separately
     images = tavily_images_safe(q)
@@ -951,12 +970,23 @@ def rag_mode(req: ModeRequest):
     
     memory.add(ws, "user", q)
     
-    # Run the RAGOnlyGraph pipeline
-    state = rag_graph.run(q, ws)
-    
-    answer = state.get("answer", "No answer generated.")
-    sources = state.get("sources", [])
-    follow = state.get("followups", [])
+    try:
+        if rag_graph is None:
+            # LITE_MODE fallback
+            answer = "RAG mode requires document uploads. In lite mode, please use Web Search instead."
+            sources = []
+            follow = []
+        else:
+            # Run the RAGOnlyGraph pipeline
+            state = rag_graph.run(q, ws)
+            answer = state.get("answer", "No answer generated.")
+            sources = state.get("sources", [])
+            follow = state.get("followups", [])
+    except Exception as e:
+        print(f"RAG error: {e}")
+        answer = f"RAG mode encountered an error: {str(e)[:100]}"
+        sources = []
+        follow = []
     
     memory.add(ws, "assistant", answer)
     
@@ -983,14 +1013,30 @@ def agentic_mode(req: ModeRequest):
     memory.add(ws, "user", q)
     print(f"\n🤖 AGENTIC MODE (LangGraph): {q}")
     
-    # Run the AgenticRAGGraph pipeline
-    state = agentic_graph.run(q, ws)
-    
-    answer = state.get("answer", "No answer generated.")
-    sources = state.get("sources", [])
-    links = state.get("links", [])
-    images = state.get("images", [])
-    follow = state.get("followups", [])
+    try:
+        if agentic_graph is None:
+            # LITE_MODE fallback - use web search
+            state = web_graph.run(q)
+            answer = state.get("answer", "No answer generated.")
+            sources = state.get("sources", [])
+            links = state.get("links", [])
+            images = tavily_images_safe(q)
+            follow = state.get("followups", [])
+        else:
+            # Run the AgenticRAGGraph pipeline
+            state = agentic_graph.run(q, ws)
+            answer = state.get("answer", "No answer generated.")
+            sources = state.get("sources", [])
+            links = state.get("links", [])
+            images = state.get("images", [])
+            follow = state.get("followups", [])
+    except Exception as e:
+        print(f"Agentic error: {e}")
+        answer = f"Agentic mode encountered an error: {str(e)[:100]}"
+        sources = []
+        links = []
+        images = []
+        follow = []
     
     memory.add(ws, "assistant", answer)
     print(f"  ✅ AgenticGraph: Completed with {len(sources)} sources")
