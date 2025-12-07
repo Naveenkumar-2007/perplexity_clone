@@ -19,17 +19,10 @@ COPY . .
 # Create workspace directories
 RUN mkdir -p /app/workspace_data /app/chroma_db
 
+# Make startup script executable
+RUN chmod +x /app/start.sh
+
 # Render requires port 10000
 EXPOSE 10000
-
-# Create startup script that runs both services
-RUN echo '#!/bin/bash\n\
-set -e\n\
-echo "Starting FastAPI backend on port 8000..."\n\
-uvicorn app.api:app --host 0.0.0.0 --port 8000 &\n\
-sleep 5\n\
-echo "Starting Streamlit frontend on port 10000..."\n\
-exec streamlit run streamlit_app.py --server.port=10000 --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false\n\
-' > /app/start.sh && chmod +x /app/start.sh
 
 CMD ["/bin/bash", "/app/start.sh"]
